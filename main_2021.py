@@ -27,6 +27,7 @@ from utils import create_optimizer, seed_worker, set_seed, str_to_bool
 from common.models import get_model
 from common.training import train_epoch
 from data_loaders.loader_2021 import get_database_path, get_loader
+from evaluate_package.evaluation_file_2019 import produce_evaluation_file as produce_evaluation_file_2019
 from evaluate_package.evaluation_file_2021 import produce_evaluation_file
 from evaluate_package.ASVspoof2021.main import evaluation_API
 
@@ -121,7 +122,7 @@ def main(args: argparse.Namespace) -> None:
     optimizer, scheduler = create_optimizer(model.parameters(), optim_config)
     optimizer_swa = SWA(optimizer)
 
-    best_dev_eer = 1.
+    best_dev_eer = 100.
     best_eval_eer = 100.
     best_dev_tdcf = 0.05
     best_eval_tdcf = 1.
@@ -138,7 +139,7 @@ def main(args: argparse.Namespace) -> None:
         print("Start training epoch{:03d}".format(epoch))
         running_loss = train_epoch(trn_loader, model, optimizer, device,
                                    scheduler, config)
-        produce_evaluation_file(dev_loader, model, device,
+        produce_evaluation_file_2019(dev_loader, model, device,
                                 metric_path/"dev_score.txt", paths["dev_meta_path"])
         dev_eer, dev_tdcf = calculate_tDCF_EER(
             cm_scores_file=metric_path/"dev_score.txt",
@@ -162,21 +163,36 @@ def main(args: argparse.Namespace) -> None:
             if str_to_bool(config["eval_all_best"]):
                 produce_evaluation_file(eval_loader, model, device,
                                         eval_score_path, paths["eval_meta_path"])
-                eval_eer, eval_tdcf = calculate_tDCF_EER(
-                    cm_scores_file=eval_score_path,
-                    asv_score_file=paths['asv_score_eval_path'],
-                    output_file=metric_path /
-                    "t-DCF_EER_{:03d}epo.txt".format(epoch))
+                tdcf_array, eer_array = evaluation_API(
+                    cm_score_file=eval_score_path,
+                    track=args.track,
+                    label_dir=paths['asv_keys_path'])
+                # extract pooled t-DCF and EER
+                eval_eer = eer_array[-1][-1]
+                eval_tdcf = tdcf_array[-1][-1]
 
                 log_text = "epoch{:03d}, ".format(epoch)
-                if eval_eer < best_eval_eer:
-                    log_text += "best eer, {:.4f}%".format(eval_eer)
-                    best_eval_eer = eval_eer
-                if eval_tdcf < best_eval_tdcf:
-                    log_text += "best tdcf, {:.4f}".format(eval_tdcf)
-                    best_eval_tdcf = eval_tdcf
-                    torch.save(model.state_dict(),
-                               model_save_path / "best.pth")
+
+                if track == "LA":
+                    # primary metric for LA is t-DCF
+                    # secondary metric is EER
+                    if eval_eer < best_eval_eer:
+                        log_text += "best eer, {:.4f}%".format(eval_eer)
+                        best_eval_eer = eval_eer
+                    if eval_tdcf < best_eval_tdcf:
+                        log_text += "best tdcf, {:.4f}".format(eval_tdcf)
+                        best_eval_tdcf = eval_tdcf
+                        torch.save(model.state_dict(),
+                                model_save_path / "best.pth")
+
+                elif track == "DF":
+                    # primary metric for DF is EER
+                    if eval_eer < best_eval_eer:
+                        log_text += "best eer, {:.4f}%".format(eval_eer)
+                        best_eval_eer = eval_eer
+                        torch.save(model.state_dict(),
+                                model_save_path / "best.pth")
+
                 if len(log_text) > 0:
                     print(log_text)
                     f_log.write(log_text + "\n")
@@ -194,12 +210,19 @@ def main(args: argparse.Namespace) -> None:
         optimizer_swa.bn_update(trn_loader, model, device=device)
     produce_evaluation_file(eval_loader, model, device, eval_score_path,
                             paths["eval_meta_path"])
-    eval_eer, eval_tdcf = calculate_tDCF_EER(cm_scores_file=eval_score_path,
-                                             asv_score_file=paths['asv_score_eval_path'],
-                                             output_file=model_tag / "t-DCF_EER.txt")
+    tdcf_array, eer_array = evaluation_API(
+        cm_score_file=eval_score_path,
+        track=args.track,
+        label_dir=paths['asv_keys_path'])
+    # extract pooled t-DCF and EER
+    eval_eer = eer_array[-1][-1] * 100
+    eval_tdcf = tdcf_array[-1][-1]
     f_log = open(model_tag / "metric_log.txt", "a")
     f_log.write("=" * 5 + "\n")
-    f_log.write("EER: {:.3f}, min t-DCF: {:.5f}".format(eval_eer, eval_tdcf))
+    if track == "LA":
+        f_log.write("EER: {:.3f}, min t-DCF: {:.5f}".format(eval_eer, eval_tdcf))
+    elif track == "DF":
+        f_log.write("EER: {:.3f}".format(eval_eer))
     f_log.close()
 
     torch.save(model.state_dict(),

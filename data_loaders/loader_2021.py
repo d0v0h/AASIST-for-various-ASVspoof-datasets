@@ -15,7 +15,7 @@ ___author__ = "Hemlata Tak, Jee-weon Jung"
 __email__ = "tak@eurecom.fr, jeeweon.jung@navercorp.com"
 
 
-def get_database_path(database_path: Path, track=None) -> Dict[str, Path]:
+def get_database_path(database_path: Path, track: str) -> Dict[str, Path]:
     # Return ASVspoof 2019 database path
     ASVspoof_2019_path = database_path / 'ASVspoof2019'
     ASVspoof_2021_path = database_path / 'ASVspoof2021'
@@ -33,7 +33,7 @@ def get_database_path(database_path: Path, track=None) -> Dict[str, Path]:
     paths["eval_meta_path"] = (ASVspoof_2021_path / f"ASVspoof2021_{track}_eval" / f"ASVspoof2021.{track}.cm.eval.trl.txt")
 
     # ASV score path
-    paths['asv_score_dev_path'] = (database_path / "ASVspoof2019_LA_asv_scores" / "ASVspoof2019.LA.asv.dev.gi.trl.scores.txt")
+    paths['asv_score_dev_path'] = (ASVspoof_2019_path / "ASVspoof2019_LA_asv_scores" / "ASVspoof2019.LA.asv.dev.gi.trl.scores.txt")
     paths['asv_keys_path'] = (ASVspoof_2021_path / "keys")
 
     return paths
