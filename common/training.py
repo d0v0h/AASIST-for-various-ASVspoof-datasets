@@ -6,7 +6,7 @@ import torch.nn.functional as F
 from torch.utils.data import DataLoader
 from tqdm import tqdm
 
-from utils import str_to_bool
+from common.utils import str_to_bool
 
 
 def train_epoch(

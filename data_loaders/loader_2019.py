@@ -7,7 +7,7 @@ from torch.utils.data import DataLoader
 from typing import List, Dict
 from pathlib import Path
 
-from utils import seed_worker
+from common.utils import seed_worker
 
 
 ___author__ = "Hemlata Tak, Jee-weon Jung"

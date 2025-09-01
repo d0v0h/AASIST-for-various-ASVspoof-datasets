@@ -20,8 +20,8 @@ from torch.utils.data import DataLoader
 from torch.utils.tensorboard import SummaryWriter
 from torchcontrib.optim import SWA
 
-from evaluation import calculate_tDCF_EER
-from utils import create_optimizer, seed_worker, set_seed, str_to_bool
+from evaluate_package.ASVspoof2019.evaluation import calculate_tDCF_EER
+from common.utils import create_optimizer, seed_worker, set_seed, str_to_bool
 from common.models import get_model
 from common.training import train_epoch
 from data_loaders.loader_2019 import get_database_path, get_loader
