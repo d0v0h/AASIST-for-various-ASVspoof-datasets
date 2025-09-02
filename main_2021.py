@@ -168,7 +168,7 @@ def main(args: argparse.Namespace) -> None:
                     track=args.track,
                     label_dir=paths['asv_keys_path'])
                 # extract pooled t-DCF and EER
-                eval_eer = eer_array[-1][-1]
+                eval_eer = eer_array[-1][-1] * 100
                 eval_tdcf = tdcf_array[-1][-1]
 
                 log_text = "epoch{:03d}, ".format(epoch)
