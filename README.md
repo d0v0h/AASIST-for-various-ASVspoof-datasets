@@ -2,7 +2,16 @@
 
 This repository is a modified version of the original [AASIST (clovaai/aasist)](https://github.com/clovaai/aasist) project, adapted to work flexibly with various ASVspoof datasets (e.g., ASVspoof 2019, ASVspoof 2021, and ASVspoof 5).
 
+### Supported Datasets
+*   ASVspoof 2019 **LA** (Logical Access)
+*   ASVspoof 2021 **LA** & **DF** (Logical Access & Deepfake)
+*   ASVspoof 5 **Track 1**
 
+### Currently Not Supported
+*   ASVspoof 2019/2021 **PA** (Physical Access) tasks
+*   ASVspoof 5 **Track 2**
+
+---
 
 ## Installation
 
@@ -109,5 +118,6 @@ python main_2021.py --config ./config/AASIST.conf --track LA --eval
 ## License
 
 This project is based on the original AASIST, which is released under the MIT License. See the [LICENSE](LICENSE) file for more details.
+
 
 **Important**: This repository contains subcomponents with different licenses. Please review the [NOTICE](NOTICE) file for details on all included licenses, as some components have restrictions
