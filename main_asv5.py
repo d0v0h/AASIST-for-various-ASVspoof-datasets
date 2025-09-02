@@ -132,9 +132,8 @@ def main(args: argparse.Namespace) -> None:
     for epoch in range(config["num_epochs"]):
         print("training epoch{:03d}".format(epoch))
         
-        # running_loss = train_epoch(trn_loader, model, optimizer, device,
-        #                            scheduler, config)
-        running_loss = 123
+        running_loss = train_epoch(trn_loader, model, optimizer, device,
+                                   scheduler, config)
         
         produce_evaluation_file(dev_loader, model, device,
                                 metric_path/"dev_score.txt", paths["dev_meta_path"])
