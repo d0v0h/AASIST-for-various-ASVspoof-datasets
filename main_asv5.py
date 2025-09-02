@@ -19,7 +19,8 @@ from torch.utils.tensorboard import SummaryWriter
 from torchcontrib.optim import SWA
 
 from data_loaders.loader_asv5 import get_database_path, get_loader
-from evaluate_package.ASVspoof5.eval.calculate_metrics import calculate_minDCF_EER_CLLR, calculate_aDCF_tdcf_tEER
+from evaluate_package.ASVspoof5.eval.calculate_metrics import calculate_minDCF_EER_CLLR_actDCF
+from evaluate_package.ASVspoof5.eval.util import load_cm_scores_keys
 from common.models import get_model
 from common.utils import create_optimizer, set_seed
 from common.training import train_epoch
@@ -98,11 +99,16 @@ def main(args: argparse.Namespace) -> None:
         produce_evaluation_file(eval_loader, model, device,
                                 eval_score_path, paths["eval_meta_path"])
 
-        eval_dcf, eval_eer, eval_cllr = calculate_minDCF_EER_CLLR(
+        cm_scores, cm_keys = load_cm_scores_keys(
             cm_scores_file=eval_score_path,
-            output_file=model_tag/"loaded_model_result.txt")
-        print("DONE. eval_eer: {:.3f}, eval_dcf:{:.5f} , eval_cllr:{:.5f}".format(eval_eer, eval_dcf, eval_cllr))
-
+            cm_keys_file=paths["eval_meta_path"])
+        
+        minDCF, eer, cllr, actDCF = calculate_minDCF_EER_CLLR_actDCF(
+            cm_scores = cm_scores,
+            cm_keys = cm_keys,
+            output_file=model_tag / "track1_result.txt")
+        print("-eval_mindcf: {:.5f}\n-eval_eer (%): {:.3f}\n-eval_cllr (bits): {:.5f}\n-eval_actDCF: {:.5f}\n".format(
+            minDCF, eer*100, cllr, actDCF))
         sys.exit(0)
 
     # get optimizer and scheduler
@@ -110,8 +116,9 @@ def main(args: argparse.Namespace) -> None:
     optimizer, scheduler = create_optimizer(model.parameters(), optim_config)
     optimizer_swa = SWA(optimizer)
 
+    best_dev_minDCF = 1.
+    best_dev_actDCF = 1.
     best_dev_eer = 100.
-    best_dev_dcf = 1.
     best_dev_cllr = 1.
     n_swa_update = 0  # number of snapshots of model to use in SWA
     f_log = open(model_tag / "metric_log.txt", "a")
@@ -125,25 +132,36 @@ def main(args: argparse.Namespace) -> None:
     for epoch in range(config["num_epochs"]):
         print("training epoch{:03d}".format(epoch))
         
-        running_loss = train_epoch(trn_loader, model, optimizer, device,
-                                   scheduler, config)
+        # running_loss = train_epoch(trn_loader, model, optimizer, device,
+        #                            scheduler, config)
+        running_loss = 123
         
         produce_evaluation_file(dev_loader, model, device,
                                 metric_path/"dev_score.txt", paths["dev_meta_path"])
-        dev_eer, dev_dcf, dev_cllr = calculate_minDCF_EER_CLLR(
+        
+        cm_scores, cm_keys = load_cm_scores_keys(
             cm_scores_file=metric_path/"dev_score.txt",
-            output_file=metric_path/"dev_DCF_EER_{}epo.txt".format(epoch),
-            printout=False)
-        print("DONE.\nLoss:{:.5f}, dev_eer: {:.3f}, dev_dcf:{:.5f} , dev_cllr:{:.5f}".format(
-            running_loss, dev_eer, dev_dcf, dev_cllr))
+            cm_keys_file=paths["dev_meta_path"])
+
+        dev_minDCF, dev_eer, dev_cllr, dev_actDCF = calculate_minDCF_EER_CLLR_actDCF(
+            cm_scores = cm_scores,
+            cm_keys = cm_keys,
+            output_file=model_tag / "track1_result.txt")
+        
+        print("-eval_mindcf: {:.5f}\n-eval_eer (%): {:.3f}\n-eval_cllr (bits): {:.5f}\n-eval_actDCF: {:.5f}\n".format(
+            dev_minDCF, dev_eer*100, dev_cllr, dev_actDCF))
+
         writer.add_scalar("loss", running_loss, epoch)
+        writer.add_scalar("dev_minDCF", dev_minDCF, epoch)
         writer.add_scalar("dev_eer", dev_eer, epoch)
-        writer.add_scalar("dev_dcf", dev_dcf, epoch)
         writer.add_scalar("dev_cllr", dev_cllr, epoch)
+        writer.add_scalar("dev_actDCF", dev_actDCF, epoch)
+
         torch.save(model.state_dict(),
                        model_save_path / "epoch_{}_{:03.3f}.pth".format(epoch, dev_eer))
 
-        best_dev_dcf = min(dev_dcf, best_dev_dcf)
+        best_dev_minDCF = min(dev_minDCF, best_dev_minDCF)
+        best_dev_actDCF = min(dev_actDCF, best_dev_actDCF)
         best_dev_cllr = min(dev_cllr, best_dev_cllr)
         if best_dev_eer >= dev_eer:
             print("best model find at epoch", epoch)
@@ -153,7 +171,8 @@ def main(args: argparse.Namespace) -> None:
             optimizer_swa.update_swa()
             n_swa_update += 1
         writer.add_scalar("best_dev_eer", best_dev_eer, epoch)
-        writer.add_scalar("best_dev_tdcf", best_dev_dcf, epoch)
+        writer.add_scalar("best_dev_actDCF", best_dev_actDCF, epoch)
+        writer.add_scalar("best_dev_minDCF", best_dev_minDCF, epoch)
         writer.add_scalar("best_dev_cllr", best_dev_cllr, epoch)
 
 
