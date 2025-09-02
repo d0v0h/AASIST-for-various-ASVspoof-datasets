@@ -1,158 +1,89 @@
-# AASIST
+# AASIST for various ASVspoof datasets
 
-This repository provides the overall framework for training and evaluating audio anti-spoofing systems proposed in ['AASIST: Audio Anti-Spoofing using Integrated Spectro-Temporal Graph Attention Networks'](https://arxiv.org/abs/2110.01200)
+This repository is a modified version of the original [AASIST (clovaai/aasist)](https://github.com/clovaai/aasist) project, adapted to work flexibly with various ASVspoof datasets (e.g., ASVspoof 2019, ASVspoof 2021, and ASVspoof 5).
 
-### Getting started
-`requirements.txt` must be installed for execution. We state our experiment environment for those who prefer to simulate as similar as possible. 
-- Installing dependencies
-```
-pip install -r requirements.txt
-```
-- Our environment (for GPU training)
-  - Based on a docker image: `pytorch:1.6.0-cuda10.1-cudnn7-runtime`
-  - GPU: 1 NVIDIA Tesla V100
-    - About 16GB is required to train AASIST using a batch size of 24
-  - gpu-driver: 418.67
 
-### Data preparation
-We train/validate/evaluate AASIST using the ASVspoof 2019 logical access dataset [4].
-```
-python ./download_dataset.py
-```
-(Alternative) Manual preparation is available via 
-- ASVspoof2019 dataset: https://datashare.ed.ac.uk/handle/10283/3336
-  1. Download `LA.zip` and unzip it
-  2. Set your dataset directory in the configuration file
+## Installation Steps
 
-### Training 
-The `main.py` includes train/validation/evaluation.
+1.  Clone the repository:
+    ```bash
+    git clone https://github.com/d0v0h/AASIST-for-various-ASVspoof-datasets.git
+    cd AASIST-for-various-ASVspoof-datasets
+    ```
 
-To train AASIST [1]:
-```
-python main.py --config ./config/AASIST.conf
-```
-To train AASIST-L [1]:
-```
-python main.py --config ./config/AASIST-L.conf
-```
+2.  Install the required packages:
+    ```bash
+    pip install -r requirements.txt
+    ```
 
-#### Training baselines
+3.  Prepare the dataset:
+    Download the ASVspoof dataset(s) and place them inside a `DB/` directory at the project root. Refer to the original project for the expected directory structure.
 
-We additionally enabled the training of RawNet2[2] and RawGAT-ST[3]. 
+## Training
 
-To Train RawNet2 [2]:
-```
-python main.py --config ./config/RawNet2_baseline.conf
-```
+To train AASIST on different datasets, use the corresponding script:
 
-To train RawGAT-ST [3]:
-```
-python main.py --config ./config/RawGATST_baseline.conf
-```
+*   **ASVspoof 2019 LA:**
+    ```bash
+    python main_2019.py --config ./config/AASIST.conf
+    ```
 
-### Pre-trained models
-We provide pre-trained AASIST and AASIST-L.
+*   **ASVspoof 2021 LA:**
+    ```bash
+    python main_2021.py --config ./config/AASIST.conf --track LA
+    ```
 
-To evaluate AASIST [1]:
-- It shows `EER: 0.83%`, `min t-DCF: 0.0275`
-```
-python main.py --eval --config ./config/AASIST.conf
-```
-To evaluate AASIST-L [1]:
-- It shows `EER: 0.99%`, `min t-DCF: 0.0309`
-- Model has `85,306` parameters
-```
-python main.py --eval --config ./config/AASIST-L.conf
+*   **ASVspoof 2021 DF:**
+    ```bash
+    python main_2021.py --config ./config/AASIST.conf --track DF
+    ```
+
+*   **ASVspoof 5:**
+    ```bash
+    python main_asv5.py --config ./config/AASIST.conf
+    ```
+
+## Evaluation
+
+To evaluate a trained model, use the `--eval` flag. For example:
+
+```bash
+python main_2021.py --config ./config/AASIST.conf --track LA --eval
 ```
 
+## Database structure
 
-### Developing custom models
-Simply by adding a configuration file and a model architecture, one can train and evaluate their models.
-
-To train a custom model:
 ```
-1. Define your model
-  - The model should be a class named "Model"
-2. Make a configuration by modifying "model_config"
-  - architecture: filename of your model.
-  - hyper-parameters to be tuned can be also passed using variables in "model_config"
-3. run python main.py --config {CUSTOM_CONFIG_NAME}
-```
-
-### License
-```
-Copyright (c) 2021-present NAVER Corp.
-
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
-
-The above copyright notice and this permission notice shall be included in
-all copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.  IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
-THE SOFTWARE.
+DB
+├── ASVspoof2019
+│   ├── ASVspoof2019_LA_asv_protocols
+│   ├── ASVspoof2019_LA_asv_scores
+│   ├── ASVspoof2019_LA_cm_protocols
+│   ├── ASVspoof2019_LA_dev
+│   │   └── flac
+│   ├── ASVspoof2019_LA_eval
+│   │   └── flac
+│   └── ASVspoof2019_LA_train
+│       └── flac
+├── ASVspoof2021
+│   ├── ASVspoof2021_DF_eval
+│   │   └── flac
+│   ├── ASVspoof2021_LA_eval
+│   │   └── flac
+│   └── keys
+│       ├── DF
+│       │   └── CM
+│       └── LA
+│           ├── ASV
+│           └── CM
+└── ASVspoof5
+    ├── flac_D
+    ├── flac_E_eval
+    └── flac_T
 ```
 
-### Acknowledgements
-This repository is built on top of several open source projects. 
-- [ASVspoof 2021 baseline repo](https://github.com/asvspoof-challenge/2021/tree/main/LA/Baseline-RawNet2)
-- [min t-DCF implementation](https://www.asvspoof.org/resources/tDCF_python_v2.zip)
+## License
 
-The repository for baseline RawGAT-ST model will be open
--  https://github.com/eurecom-asp/RawGAT-ST-antispoofing
+This project is based on the original AASIST, which is released under the MIT License. See the [LICENSE](LICENSE) file for more details.
 
-The dataset we use is ASVspoof 2019 [4]
-- https://www.asvspoof.org/index2019.html
-
-### References
-[1] AASIST: Audio Anti-Spoofing using Integrated Spectro-Temporal Graph Attention Networks
-```bibtex
-@INPROCEEDINGS{Jung2021AASIST,
-  author={Jung, Jee-weon and Heo, Hee-Soo and Tak, Hemlata and Shim, Hye-jin and Chung, Joon Son and Lee, Bong-Jin and Yu, Ha-Jin and Evans, Nicholas},
-  booktitle={arXiv preprint arXiv:2110.01200}, 
-  title={AASIST: Audio Anti-Spoofing using Integrated Spectro-Temporal Graph Attention Networks}, 
-  year={2021}
-```
-
-[2] End-to-End anti-spoofing with RawNet2
-```bibtex
-@INPROCEEDINGS{Tak2021End,
-  author={Tak, Hemlata and Patino, Jose and Todisco, Massimiliano and Nautsch, Andreas and Evans, Nicholas and Larcher, Anthony},
-  booktitle={Proc. ICASSP}, 
-  title={End-to-End anti-spoofing with RawNet2}, 
-  year={2021},
-  pages={6369-6373}
-}
-```
-
-[3] End-to-end spectro-temporal graph attention networks for speaker verification anti-spoofing and speech deepfake detection
-```bibtex
-@inproceedings{tak21_asvspoof,
-  author={Tak, Hemlata and Jung, Jee-weon and Patino, Jose and Kamble, Madhu and Todisco, Massimiliano and Evans, Nicholas},
-  booktitle={Proc. ASVSpoof Challenge},
-  title={End-to-end spectro-temporal graph attention networks for speaker verification anti-spoofing and speech deepfake detection},
-  year={2021},
-  pages={1--8}
-```
-
-[4] ASVspoof 2019: A large-scale public database of synthesized, converted and replayed speech
-```bibtex
-@article{wang2020asvspoof,
-  title={ASVspoof 2019: A large-scale public database of synthesized, converted and replayed speech},
-  author={Wang, Xin and Yamagishi, Junichi and Todisco, Massimiliano and Delgado, H{\'e}ctor and Nautsch, Andreas and Evans, Nicholas and Sahidullah, Md and Vestman, Ville and Kinnunen, Tomi and Lee, Kong Aik and others},
-  journal={Computer Speech \& Language},
-  volume={64},
-  pages={101114},
-  year={2020},
-  publisher={Elsevier}
-}
-```
+**Important**: This repository contains subcomponents with different licenses. Please review the [NOTICE](NOTICE) file for details on all included licenses, as some components have restrictions on
